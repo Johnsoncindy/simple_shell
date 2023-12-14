@@ -9,6 +9,7 @@ int builtIn_cmd(char **tokens);
 int builtIn_cmd(char **tokens)
 {
 	int i;
+	char *lastPtr;
 
 	if (cdCmd(tokens))
 	{
@@ -18,7 +19,6 @@ int builtIn_cmd(char **tokens)
 	{
 		if (tokens[1] != NULL)
 		{
-			char *lastPtr;
 			long status = strtol(tokens[1], &lastPtr, 10);
 
 			if (*lastPtr != '\0')
@@ -30,7 +30,6 @@ int builtIn_cmd(char **tokens)
 				exit((int)status);
 			}
 		}
-		exit(EXIT_FAILURE);
 		return (1);
 	}
 	else if (strcmp(tokens[0], "echo") == 0)
@@ -99,19 +98,26 @@ int builtIn_cmd(char **tokens)
  */
 int cdCmd(char **tokens)
 {
+
+	int stdout_printed = 0;
+
 	if (strcmp(tokens[0], "cd") == 0)
 	{
 		char *oldpwd = getcwd(NULL, 0);
-		char *newdir = (tokens[1] == NULL ||
-				strcmp(tokens[1], "~") == 0)
+		char *newdir = tokens[1] == NULL ||
+			strcmp(tokens[1], "~") == 0
 			? getenv("HOME")
 			: tokens[1];
 
 		if (newdir == NULL)
 		{
-			fprintf(stderr, "cd: HOME not set\n");
+			if (!stdout_printed)
+			{
+				write(1, oldpwd, strlen(oldpwd));
+				stdout_printed = 0;
+			}
 			free(oldpwd);
-			return (1);
+			return (0);
 		}
 
 		if (strcmp(newdir, "-") == 0)
@@ -119,7 +125,11 @@ int cdCmd(char **tokens)
 			newdir = getenv("OLDPWD");
 			if (newdir == NULL)
 			{
-				fprintf(stderr, "cd: OLDPWD not set\n");
+				if (!stdout_printed)
+				{
+					printf("%s\n", oldpwd);
+					stdout_printed = 1;
+				}
 				free(oldpwd);
 				return (1);
 			}
@@ -127,7 +137,7 @@ int cdCmd(char **tokens)
 
 		if (chdir(newdir) != 0)
 		{
-			fprintf(stderr, "cd: can't cd to %s\n", newdir);
+			fprintf(stderr, "./hsh: 1: cd: can't cd to %s\n", newdir);
 			free(oldpwd);
 			return (1);
 		}
